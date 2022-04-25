@@ -1,0 +1,353 @@
+/*
+Name: Lütfü Sirac Küçükarabacıoğlu
+ID: 504211521
+Project1-BLG336E
+*/
+
+main:
+    GET beginingTime
+    GET pathofPlayer1, pathofPlayer2
+
+    CALL readPlayer with pathofPlayer1, pathofPlayer2
+
+    CALL buildGraph with P1sizeofMap RETURNING P1MapHead
+    CALL buildGraph with P2sizeofMap RETURNING P2MapHead
+
+    Player1numberofNodesKeptInMemory = P1sizeofMap*P1sizeofMap
+    Player2numberofNodesKeptInMemory = P2sizeofMap*P2sizeofMap
+
+    CALL filltheMap with Player1
+    CALL filltheMap with Player2
+    CREATE an int called Winner
+    CALL starttheGame RETURNING Winner
+
+    GET endTime
+    CALL log with Winner, (endTime-beginingTime)
+ENDmain
+
+readPlayer:
+    CREATE int Counter as 0
+    WHILE getline gives new lines from file
+        IF counter == 0 and line == "DFS" THEN
+            Player1's algorithm = DFS
+        ELSEIF counter == 0 and line == "BFS" THEN
+            Player1's algorithm = BFS
+        ELSEIF counter == 1 THEN
+            SET Player1's initial points
+        ELSEIF counter == 2 THEN
+            SET Player1's map size
+            SET Player1's number of ships
+        ELSE
+            CREATE a ship with koordinates
+            PUSH the ship into Player1's ship vector
+        ENDIF
+        SET counter as counter +1
+    ENDWHILE
+
+    SET counter as 0
+    WHILE getline gives new lines from file
+        IF counter == 0 and line == "DFS" THEN
+            Player2's algorithm = DFS
+        ELSEIF counter == 0 and line == "BFS" THEN
+            Player2's algorithm = BFS
+        ELSEIF counter == 1 THEN
+            SET Player2's initial points
+        ELSEIF counter == 2 THEN
+            SET Player2's map size
+            SET Player2's number of ships
+        ELSE
+            CREATE a ship with koordinates
+            PUSH the ship into Player2's ship vector
+        ENDIF
+        SET counter as counter +1
+    ENDWHILE
+ENDreadPlayer
+
+buildGraph:
+    CREATE node * 2D array with sizeofmap which is comes as argument
+
+    FOR i in sizeofmap
+        FOR j in sizeofmap
+            CREATE a new node with address of node[i][j] 
+            IF j != 0 
+                nodeList[i][j-1]'s right = nodeList[i][j];
+                nodeList[i][j]'s left = nodeList[i][j-1];
+            ENDIF
+            IF i != 0
+                nodeList[i-1][j]'s down = nodeList[i][j];
+                nodeList[i][j]'s up = nodeList[i-1][j];
+            ENDIF
+        ENDFOR
+    ENDFOR
+    RETURN node[0][0]
+ENDbuildGraph
+
+filltheMap:
+    CREATE size as numberofships of Player as argument
+    CREATE temp vector as Player's ships
+    FOR i in size
+        placetheShip with Player, and temp[i]
+    ENDFOR
+ENDfilltheMap
+
+placetheShip:
+    CREATE  node * temp as ship comes as argument
+
+    WHILE temp->x < ship->xbegin
+        temp = temp->down
+    ENDWHILE
+
+    WHILE temp->y < ship->ybegin
+        temp = temp->right
+    ENDWHILE
+
+    IF ship->axis equals 'x'
+        FOR i in ship's size
+            temp's node is assined as shipnode
+            temp = temp->down
+            player->Map's number of ship nodes + 1
+        ENDFOR
+    ENDIF
+
+    IF ship->axis equals 'y'
+        FOR i in ship's size
+            temp's node is assined as shipnode
+            temp = temp->right
+            player->Map's number of ship nodes + 1
+        ENDFOR
+    ENDIF
+ENDplacetheShip
+
+
+starttheGame:
+    CREATE int Winner as 0
+
+    IF Player1's algorithm == "BFS"
+        CALL BFSGame RETURNING Winner
+    ENDIF
+
+    IF Player1's algorithm == "DFS"
+        CALL DFSGame RETURNING Winner
+    ENDIF
+
+RETURN Winner
+ENDstarttheGame
+
+BFSGame:
+    CREATE node * tempP2 as Player2.Map.Head
+    CREATE node * tempP1 as Player1.Map.Head
+
+    FOR i in Player1's initial point x
+        tempP2 = tempP2->down
+    ENDFOR
+    FOR i in Player1's initial point x
+        tempP2 = tempP2->right
+    ENDFOR    
+    FOR i in Player2's initial point x
+        tempP1 = tempP1->down
+    ENDFOR    
+    FOR i in Player2's initial point x
+        tempP1 = tempP1->right
+    ENDFOR
+
+    CREATE queue<node*> P1_q
+    CREATE queue<node*> P2_q
+
+    PUSH tempP2 to P1_q
+    PUSH tempP1 to P2_q
+
+    Player1's numberofNodesKeptInMemory++
+    Player2's numberofNodesKeptInMemory++
+
+    WHILE P1_q not empty and P2_q not empty
+        CREATE node * temp = P1_q.front()
+        POP P1_q
+        Player1's numberofVisitedNode++
+        SET temp->isVisited as TRUE
+
+        IF temp is ship node
+            SET temp->isFull = false
+            Player2's Map.numberofFullNode--
+        ENDIF
+        IF temp->up is not NULL and temp->left is not visited
+            PUSH temp->up to P1_q
+            Player1's numberofNodesKeptInMemory++
+            SET temp->up as Visited
+        ENDIF
+        IF temp->left is not NULL and temp->left is not visited
+            PUSH temp->left to P1_q
+            Player1's numberofNodesKeptInMemory++
+            SET temp->left as Visited
+        ENDIF
+        IF temp->down is not NULL and temp->left is not visited
+            PUSH temp->down to P1_q
+            Player1's numberofNodesKeptInMemory++
+            SET temp->down as Visited
+        ENDIF
+        IF temp->right is not NULL and temp->left is not visited
+            PUSH temp->right to P1_q
+            Player1's numberofNodesKeptInMemory++
+            SET temp->right as Visited
+        ENDIF
+
+        IF Player2' Map.numberofFullNode is equals 0 
+            RETURN 1
+
+        SET node * temp = P2_q.front()
+        POP P2_q
+        Player2's numberofVisitedNode++
+        SET temp->isVisited as TRUE
+
+        IF temp is ship node
+            SET temp->isFull = false
+            Player1's Map.numberofFullNode--
+        ENDIF
+        IF temp->up is not NULL and temp->left is not visited
+            PUSH temp->up to P2_q
+            Player2's numberofNodesKeptInMemory++
+            SET temp->up as Visited
+        ENDIF
+        IF temp->left is not NULL and temp->left is not visited
+            PUSH temp->left to P2_q
+            Player2's numberofNodesKeptInMemory++
+            SET temp->left as Visited
+        ENDIF
+        IF temp->down is not NULL and temp->left is not visited
+            PUSH temp->down to P2_q
+            Player2's numberofNodesKeptInMemory++
+            SET temp->down as Visited
+        ENDIF
+        IF temp->right is not NULL and temp->left is not visited
+            PUSH temp->right to P2_q
+            Player2's numberofNodesKeptInMemory++
+            SET temp->right as Visited
+        ENDIF
+
+        IF Player1' Map.numberofFullNode is equals 0 
+            RETURN 2
+
+    ENDWHILE
+RETURN -1
+ENDBFSGame
+            
+DFSGame:
+    CREATE node * tempP2 as Player2.Map.Head
+    CREATE node * tempP1 as Player1.Map.Head
+
+    FOR i in Player1's initial point x
+        tempP2 = tempP2->down
+    ENDFOR
+    FOR i in Player1's initial point x
+        tempP2 = tempP2->right
+    ENDFOR    
+    FOR i in Player2's initial point x
+        tempP1 = tempP1->down
+    ENDFOR    
+    FOR i in Player2's initial point x
+        tempP1 = tempP1->right
+    ENDFOR
+
+    CREATE int winner as 0
+    CALL DFSrec with tempP2, tempP1 , 1 , winner
+    RETURN winner
+ENDDFSGame
+
+
+DFSrec:
+
+    IF winner is not 0 
+        RETURN
+    
+    IF(turn is equals 1)
+        Player1's numberofVisitedNode++
+        CREATE boolean empty_room as FALSE
+        IF P1node->up is not NULL and P1node->up is not shipnode
+            SET empty_room as TRUE
+        ENDIF
+        IF P1node->left is not NULL and P1node->left is not shipnode
+            SET empty_room as TRUE
+        ENDIF
+        IF P1node->down is not NULL and P1node->down is not shipnode
+            SET empty_room as TRUE
+        ENDIF
+        IF P1node->right is not NULL and P1node->right is not shipnode
+            SET empty_room as TRUE
+        ENDIF
+
+        IF P1node is ship node
+            SET P1node is not ship node
+            Player2's numberofFullNode--
+        ENDIF
+
+        IF Player2's numberofFullNode is equals 0 
+            SET winner as 1 
+            RETURN
+        ENDIF
+
+        SET P1node->visited as TRUE
+
+        IF P1node->up is not NULL and P1node->up is not visited and winner is not 0
+            CALL DFSrec with P1node->up,P2node,2,winner
+            Player1's numberofNodesKeptInMemory++
+        ENDIF
+        IF P1node->left is not NULL and P1node->left is not visited and winner is not 0
+            CALL DFSrec with P1node->left,P2node,2,winner
+            Player1's numberofNodesKeptInMemory++
+        ENDIF
+        IF P1node->down is not NULL and P1node->down is not visited and winner is not 0
+            CALL DFSrec with P1node->down,P2node,2,winner
+            Player1's numberofNodesKeptInMemory++
+        ENDIF
+        IF P1node->right is not NULL and P1node->right is not visited and winner is not 0
+            CALL DFSrec with P1node->right,P2node,2,winner
+            Player1's numberofNodesKeptInMemory++
+        ENDIF
+    ENDIF
+
+    IF(turn is equals 2)
+        Player2's numberofVisitedNode++
+        CREATE boolean empty_room as FALSE
+        IF P2node->up is not NULL and P2node->up is not shipnode
+            SET empty_room as TRUE
+        ENDIF
+        IF P2node->left is not NULL and P2node->left is not shipnode
+            SET empty_room as TRUE
+        ENDIF
+        IF P2node->down is not NULL and P2node->down is not shipnode
+            SET empty_room as TRUE
+        ENDIF
+        IF P2node->right is not NULL and P2node->right is not shipnode
+            SET empty_room as TRUE
+        ENDIF
+
+        IF P2node is ship node
+            SET P2node is not ship node
+            Player1's numberofFullNode--
+        ENDIF
+
+        IF Player1's numberofFullNode is equals 0 
+            SET winner as 1 
+            RETURN
+        ENDIF
+
+        SET P2node->visited as TRUE
+
+        IF P2node->up is not NULL and P2node->up is not visited and winner is not 0
+            CALL DFSrec with P1node,P2node->up,2,winner
+            Player2's numberofNodesKeptInMemory++
+        ENDIF
+        IF P2node->left is not NULL and P2node->left is not visited and winner is not 0
+            CALL DFSrec with P1node,P2node->left,2,winner
+            Player2's numberofNodesKeptInMemory++
+        ENDIF
+        IF P2node->down is not NULL and P2node->down is not visited and winner is not 0
+            CALL DFSrec with P1node,P2node->down,2,winner
+            Player2's numberofNodesKeptInMemory++
+        ENDIF
+        IF P2node->right is not NULL and P2node->right is not visited and winner is not 0
+            CALL DFSrec with P1node,P2node->right,2,winner
+            Player2's numberofNodesKeptInMemory++
+        ENDIF
+    ENDIF
+
+ENDDFSrec
